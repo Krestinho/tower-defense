@@ -1051,6 +1051,7 @@ class Enemy {
 class Tower {
   constructor(col, row, type) {
     this.mesh = null;
+    this.yawPivot = null;
     this.col = col;
     this.row = row;
     this.type = type;
@@ -1071,7 +1072,9 @@ class Tower {
 
   refreshVisual() {
     const previous = this.mesh;
-    this.mesh = instantiateTowerVisual(this.type, nextMeshName('tower'), this.col, this.row, this.level);
+    const visual = instantiateTowerVisual(this.type, nextMeshName('tower'), this.col, this.row, this.level);
+    this.mesh = visual.root;
+    this.yawPivot = visual.yawPivot;
     tagTowerMeshes(this.mesh, this);
     if (previous) {
       previous.dispose(false, false);
@@ -1081,11 +1084,22 @@ class Tower {
     }
   }
 
-  checkTargets(time, enemyList) {
-    if (time < this.lastFired + this.fireRate) {
+  aimAt(enemy) {
+    if (!this.yawPivot || !enemy || !enemy.mesh) {
       return;
     }
+    const from = this.yawPivot.getAbsolutePosition();
+    const to = enemy.mesh.position;
+    const dx = to.x - from.x;
+    const dz = to.z - from.z;
+    if (dx * dx + dz * dz < 1e-8) {
+      return;
+    }
+    this.yawPivot.rotation.y = Math.atan2(dx, dz);
+  }
 
+  checkTargets(time, enemyList) {
+    let target = null;
     for (let i = 0; i < enemyList.length; i++) {
       const enemy = enemyList[i];
       if (!enemy.alive || !enemy.mesh) {
@@ -1098,16 +1112,29 @@ class Tower {
       );
 
       if (distance <= this.range) {
-        this.fire(enemy);
-        this.lastFired = time;
-        return;
+        target = enemy;
+        break;
       }
     }
+
+    if (!target) {
+      return;
+    }
+
+    this.aimAt(target);
+    if (time < this.lastFired + this.fireRate) {
+      return;
+    }
+    this.fire(target);
+    this.lastFired = time;
   }
 
   fire(enemy) {
-    const origin = this.mesh.position.clone();
-    origin.y += Math.max(hierarchyHeight(this.mesh) * 0.85, 0.8);
+    this.aimAt(enemy);
+    const origin = this.yawPivot
+      ? this.yawPivot.getAbsolutePosition().clone()
+      : this.mesh.position.clone();
+    origin.y += 0.45;
     const projectile = new Projectile(
       scene,
       origin,
@@ -1354,6 +1381,7 @@ function instantiateTowerVisual(type, name, col, row, level = 0) {
   root.position.set(center.x, groundY, center.z);
 
   let offsetY = 0;
+  let yawPivot = null;
   const stack = [
     ['tower_base', 'base'],
     [`tower_bottom_${tier}`, 'bottom'],
@@ -1362,14 +1390,22 @@ function instantiateTowerVisual(type, name, col, row, level = 0) {
   ];
   stack.forEach(([key, suffix]) => {
     const piece = assets.instantiate(key, `${name}_${suffix}`, { pickable: true }).root;
-    piece.parent = root;
-    piece.position.x = 0;
-    piece.position.z = 0;
-    piece.position.y = offsetY;
+    if (suffix === 'weapon') {
+      yawPivot = new BABYLON.TransformNode(`${name}_yaw`, scene);
+      yawPivot.parent = root;
+      yawPivot.position.set(0, offsetY, 0);
+      piece.parent = yawPivot;
+      piece.position.set(0, 0, 0);
+    } else {
+      piece.parent = root;
+      piece.position.x = 0;
+      piece.position.z = 0;
+      piece.position.y = offsetY;
+    }
     offsetY += assets.templateHeight(key);
   });
 
-  return root;
+  return { root, yawPivot };
 }
 
 function drawGrid() {
