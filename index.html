@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower Defense</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+    }
+
+    #leaderboard-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 1000;
+      font-family: Arial, sans-serif;
+      color: #fff;
+    }
+
+    #leaderboard-overlay .panel {
+      background: #1a1a1a;
+      border: 2px solid #fff;
+      min-width: 320px;
+      max-width: 90vw;
+      padding: 24px 28px;
+    }
+
+    #leaderboard-overlay h2 {
+      margin: 0 0 16px;
+      font-size: 22px;
+      text-align: center;
+    }
+
+    #leaderboard-overlay ol {
+      margin: 0 0 20px;
+      padding-left: 24px;
+      line-height: 1.8;
+    }
+
+    #leaderboard-overlay .actions {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    #leaderboard-overlay button {
+      cursor: pointer;
+      padding: 8px 14px;
+      font-size: 14px;
+    }
+
+    #leaderboard-overlay .error {
+      color: #ff8080;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="config.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

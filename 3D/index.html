@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower Defense 3D</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #111;
+    }
+
+    #game-root {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      outline: none;
+      touch-action: none;
+    }
+
+    #ui-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      font-family: Arial, sans-serif;
+      color: #fff;
+      text-shadow: 0 1px 2px #000;
+    }
+
+    #hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      font-size: 18px;
+    }
+
+    #hud span {
+      font-weight: bold;
+    }
+
+    #start-wave-btn,
+    #level-select button,
+    #build-menu button,
+    #upgrade-panel button {
+      pointer-events: auto;
+      cursor: pointer;
+      padding: 8px 14px;
+      font-size: 15px;
+      border: 2px solid #fff;
+      background: #1e3a5f;
+      color: #fff;
+    }
+
+    #start-wave-btn:disabled,
+    #level-select button:disabled,
+    #upgrade-btn:disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    #level-select {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    #level-select button {
+      min-width: 36px;
+      padding: 6px 10px;
+    }
+
+    #level-select button.active {
+      background: #2f6f3a;
+      border-color: #8dff9a;
+    }
+
+    #status-value {
+      position: absolute;
+      top: 72px;
+      left: 16px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    #hint {
+      position: absolute;
+      left: 12px;
+      bottom: 88px;
+      font-size: 14px;
+    }
+
+    #build-menu {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.55);
+      pointer-events: auto;
+    }
+
+    #build-menu button.active {
+      background: #2f6f3a;
+      border-color: #8dff9a;
+    }
+
+    #build-menu .cost {
+      display: block;
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    #upgrade-panel {
+      position: absolute;
+      top: 88px;
+      right: 16px;
+      width: 240px;
+      padding: 16px;
+      background: rgba(12, 16, 24, 0.92);
+      border: 2px solid #fff;
+      pointer-events: auto;
+    }
+
+    #upgrade-panel.hidden,
+    #slow-row.hidden {
+      display: none;
+    }
+
+    #upgrade-panel h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    #upgrade-panel p {
+      margin: 8px 0;
+    }
+
+    .stat-next {
+      color: #6fdf7a;
+      margin-left: 6px;
+    }
+
+    .stat-next:empty {
+      display: none;
+    }
+
+    #upgrade-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-root">
+    <canvas id="renderCanvas"></canvas>
+    <div id="ui-layer">
+      <div id="hud">
+        <div>Oro: <span id="gold-value">100</span></div>
+        <div>Vidas: <span id="lives-value">20</span></div>
+        <div>Nivel: <span id="level-value">1</span></div>
+        <div>Oleada: <span id="wave-value">1/3</span></div>
+        <div id="level-select">
+          <button type="button" data-level="0">1</button>
+          <button type="button" data-level="1">2</button>
+          <button type="button" data-level="2">3</button>
+        </div>
+        <button id="start-wave-btn" type="button">Empezar Oleada</button>
+      </div>
+      <div id="status-value"></div>
+      <div id="hint">Niveles 1–3 · Elige una torre abajo · Clic en hierba: construir · Clic en torre: mejorar · Derecho: orbitar</div>
+      <aside id="upgrade-panel" class="hidden">
+        <h2 id="upgrade-title">Torre</h2>
+        <p id="upgrade-level">Nivel 1</p>
+        <p>Daño: <span id="stat-damage">0</span><span class="stat-next" id="next-damage"></span></p>
+        <p>Rango: <span id="stat-range">0</span><span class="stat-next" id="next-range"></span></p>
+        <p>Cadencia: <span id="stat-fireRate">0</span><span class="stat-next" id="next-fireRate"></span></p>
+        <p id="slow-row" class="hidden">Ralentiza: <span id="stat-slow">0</span><span class="stat-next" id="next-slow"></span></p>
+        <p id="upgrade-cost"></p>
+        <div id="upgrade-actions">
+          <button id="upgrade-btn" type="button">Mejorar</button>
+          <button id="upgrade-close-btn" type="button">Cerrar</button>
+        </div>
+      </aside>
+      <nav id="build-menu"></nav>
+    </div>
+  </div>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
